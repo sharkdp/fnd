@@ -9,10 +9,24 @@ use crate::exit_codes::ExitCode;
 /// Executes a command.
 pub fn execute_command(mut cmd: Command, out_perm: &Mutex<()>) -> ExitCode {
     // Spawn the supplied command.
-    let output = cmd.output();
+    /* let output = cmd.output(); */
+    // This sort of works:
+    let child = cmd.spawn().expect("failed to wait on child");
+    let output = child
+    .wait_with_output()
+    .expect("failed to wait on child"); 
+    ExitCode::Success
+    /* let child_handle = cmd.spawn();
+    match child_handle {
+        Ok(output) => {
+            let exit_code = output.wait();
+        }
+        Err() => {
 
+        }
+    } */
     // Then wait for the command to exit, if it was spawned.
-    match output {
+    /* match output {
         Ok(output) => {
             // While this lock is active, this thread will be the only thread allowed
             // to write its outputs.
@@ -21,8 +35,8 @@ pub fn execute_command(mut cmd: Command, out_perm: &Mutex<()>) -> ExitCode {
             let stdout = io::stdout();
             let stderr = io::stderr();
 
-            let _ = stdout.lock().write_all(&output.stdout);
-            let _ = stderr.lock().write_all(&output.stderr);
+            //let _ = stdout.lock().write_all(&output.stdout);
+            //let _ = stderr.lock().write_all(&output.stderr);
 
             if output.status.code() == Some(0) {
                 ExitCode::Success
@@ -38,5 +52,5 @@ pub fn execute_command(mut cmd: Command, out_perm: &Mutex<()>) -> ExitCode {
             print_error(format!("Problem while executing command: {}", why));
             ExitCode::GeneralError
         }
-    }
+    } */
 }
