@@ -170,12 +170,16 @@ fn spawn_receiver(
 
     let show_filesystem_errors = config.show_filesystem_errors;
     let threads = config.threads;
-
+    let is_multithread: bool = if threads > 1 {
+        true
+    } else {
+        false
+    };
     thread::spawn(move || {
         // This will be set to `Some` if the `--exec` argument was supplied.
         if let Some(ref cmd) = config.command {
             if cmd.in_batch_mode() {
-                exec::batch(rx, cmd, show_filesystem_errors)
+                exec::batch(rx, cmd, show_filesystem_errors, is_multithread)
             } else {
                 let shared_rx = Arc::new(Mutex::new(rx));
 
@@ -190,7 +194,7 @@ fn spawn_receiver(
 
                     // Spawn a job thread that will listen for and execute inputs.
                     let handle =
-                        thread::spawn(move || exec::job(rx, cmd, out_perm, show_filesystem_errors));
+                        thread::spawn(move || exec::job(rx, cmd, out_perm, show_filesystem_errors, is_multithread));
 
                     // Push the handle of the spawned thread into the vector for later joining.
                     handles.push(handle);
