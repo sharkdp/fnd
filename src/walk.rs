@@ -170,6 +170,7 @@ fn spawn_receiver(
 
     let show_filesystem_errors = config.show_filesystem_errors;
     let threads = config.threads;
+    // This will be used to check if output should be buffered when only running a single thread
     let is_multithread: bool = if threads > 1 {
         true
     } else {

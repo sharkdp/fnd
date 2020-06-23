@@ -13,7 +13,8 @@ pub fn execute_command(mut cmd: Command, out_perm: &Mutex<()>, is_multithread: b
     if is_multithread {
         output = cmd.output();
     } else {
-        // This sort of works:
+        // If running on only one thread, don't buffer output
+        // Allows for viewing and interacting with intermediate command output
         let child = cmd.spawn().expect("Failed to execute command");
         output = child.wait_with_output();
     }
