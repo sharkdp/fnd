@@ -1,4 +1,18 @@
 use clap::{crate_version, App, AppSettings, Arg};
+use colored::Colorize;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref AFTER_HELP: String = format!(
+        "{} {} {} {} {} {}",
+        "Note:".yellow(),
+        "Use `fd",
+        "--help".purple(),
+        "` to get",
+        "detailed help".purple(),
+        "information. `fd -h` only prints a short an concise overview.\n",
+    );
+}
 
 pub fn build_app() -> App<'static, 'static> {
     let clap_color_setting = if std::env::var_os("NO_COLOR").is_none() {
@@ -12,10 +26,7 @@ pub fn build_app() -> App<'static, 'static> {
         .usage("fd [FLAGS/OPTIONS] [<pattern>] [<path>...]")
         .setting(clap_color_setting)
         .setting(AppSettings::DeriveDisplayOrder)
-        .after_help(
-            "Note: `fd -h` prints a short and concise overview while `fd --help` gives all \
-                 details.",
-        )
+        .after_help(AFTER_HELP.as_str())
         // Help: Short and detailed
         .arg(
             Arg::with_name("help")
