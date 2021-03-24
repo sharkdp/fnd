@@ -16,6 +16,18 @@ pub fn build_app() -> App<'static, 'static> {
             "Note: `fd -h` prints a short and concise overview while `fd --help` gives all \
                  details.",
         )
+        // Help: Short and detailed
+        .arg(
+            Arg::with_name("help")
+                .short("h")
+                .help("Prints a short and concise overview")
+        )
+        .arg(
+            Arg::with_name("help_long")
+                .long("help")
+                .help("Prints detailed help information")
+        )
+        // Other flags
         .arg(
             Arg::with_name("hidden")
                 .long("hidden")

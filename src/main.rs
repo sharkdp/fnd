@@ -50,7 +50,25 @@ ow=0:or=0;38;5;16;48;5;203:no=0:ex=1;38;5;203:cd=0;38;5;203;48;5;236:mi=0;38;5;1
 ";
 
 fn run() -> Result<ExitCode> {
-    let matches = app::build_app().get_matches_from(env::args_os());
+    let mut app = app::build_app();
+    let matches = app.get_matches_from_safe_borrow(env::args_os())?;
+
+    // Print short and long help
+    if matches.is_present("help") {
+        let _ = app.print_help();
+        // HACK: It seems like `clap` does not add a newline after the help
+        //       output when using `print_help`. Therefore add a newline here.
+        println!("");
+        return Ok(ExitCode::Success);
+    }
+    if matches.is_present("help_long") {
+        let _ = app.print_long_help();
+        // HACK: It seems like `clap` does not add a newline after the help
+        //       output when using `print_long_help`. Therefore add a newline here
+        println!("");
+        return Ok(ExitCode::Success);
+    }
+
 
     // Set the current working directory of the process
     if let Some(base_directory) = matches.value_of_os("base-directory") {
