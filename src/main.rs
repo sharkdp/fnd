@@ -51,7 +51,15 @@ ow=0:or=0;38;5;16;48;5;203:no=0:ex=1;38;5;203:cd=0;38;5;203;48;5;236:mi=0;38;5;1
 
 fn run() -> Result<ExitCode> {
     let mut app = app::build_app();
-    let matches = app.get_matches_from_safe_borrow(env::args_os())?;
+
+    // When encountering parsing errors, print error message and exit
+    let matches = match app.get_matches_from_safe_borrow(env::args_os()) {
+        Ok(matches) => matches,
+        Err(err) => {
+            eprintln!("{}", err);
+            return Ok(ExitCode::GeneralError)
+        }
+    };
 
     // Print short and long help
     if matches.is_present("help") {
