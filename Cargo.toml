@@ -33,7 +33,7 @@ path = "src/main.rs"
 clap = "2.31.2"
 version_check = "0.9"
 lazy_static = "1.1.0"
-colored = "2.0.0"
+ansi_term = "0.12"
 
 [dependencies]
 ansi_term = "0.12"
@@ -49,7 +49,6 @@ lscolors = "0.7"
 globset = "0.4"
 anyhow = "1.0"
 dirs-next = "2.0"
-colored = "2.0.0"
 
 [dependencies.clap]
 version = "2.31.2"

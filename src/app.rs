@@ -1,15 +1,16 @@
+use ansi_term::Colour::{Purple, Yellow};
 use clap::{crate_version, App, AppSettings, Arg};
-use colored::Colorize;
 use lazy_static::lazy_static;
 
 lazy_static! {
     static ref AFTER_HELP: String = format!(
-        "{} {} {} {} {} {}",
-        "Note:".yellow(),
-        "Use `fd",
-        "--help".purple(),
-        "` to get",
-        "detailed help".purple(),
+        "{} {} `{} {}` {} {} {}",
+        Yellow.paint("Note:"),
+        "Use",
+        "fd",
+        Purple.paint("--help"),
+        "to get",
+        Purple.paint("detailed help"),
         "information. `fd -h` only prints a short and concise overview.\n",
     );
 }
