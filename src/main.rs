@@ -64,19 +64,19 @@ fn run() -> Result<ExitCode> {
     // Print short and long help
     if matches.is_present("help") {
         let _ = app.print_help();
-        // HACK: It seems like `clap` does not add a newline after the help
-        //       output when using `print_help`. Therefore add a newline here.
-        //       Note, that the `after_help` string already adds a newline to generate
-        //       an empty line before the next prompt
+        // WORKAROUND: It seems like `clap` does not add a newline after the
+        //     help output when using `print_help`. Therefore add a newline
+        //     here.  Note, that the `after_help` string already adds a newline
+        //     to generate an empty line before the next prompt
         println!("");
         return Ok(ExitCode::Success);
     }
     if matches.is_present("help_long") {
         let _ = app.print_long_help();
-        // HACK: It seems like `clap` does not add a newline after the help
-        //       output when using `print_long_help`. Therefore add a newline here
-        //       Note, that the `after_help` string already adds a newline to generate
-        //       an empty line before the next prompt
+        // WORKAROUND: It seems like `clap` does not add a newline after the
+        //     help output when using `print_long_help`. Therefore add a newline
+        //     here Note, that the `after_help` string already adds a newline to
+        //     generate an empty line before the next prompt
         println!("");
         return Ok(ExitCode::Success);
     }
