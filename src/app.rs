@@ -10,7 +10,7 @@ lazy_static! {
         "--help".purple(),
         "` to get",
         "detailed help".purple(),
-        "information. `fd -h` only prints a short an concise overview.\n",
+        "information. `fd -h` only prints a short and concise overview.\n",
     );
 }
 
