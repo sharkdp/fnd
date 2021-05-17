@@ -197,7 +197,7 @@ impl TestEnv {
 
         // Check for exit status.
         if !output.status.success() {
-            panic!(format_exit_error(args, &output));
+            panic!("{}", format_exit_error(args, &output));
         }
 
         output
@@ -236,7 +236,7 @@ impl TestEnv {
 
         // Compare actual output to expected output.
         if expected != actual {
-            panic!(format_output_error(args, &expected, &actual));
+            panic!("{}", format_output_error(args, &expected, &actual));
         }
     }
 
@@ -289,7 +289,7 @@ impl TestEnv {
 
             // Compare actual output to expected output.
             if !actual_err.trim_start().starts_with(&expected_error) {
-                panic!(format_output_error(args, &expected_error, &actual_err));
+                panic!("{}", format_output_error(args, &expected_error, &actual_err));
             }
         }
 
