@@ -5,7 +5,7 @@ use std::io::Write;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
-use regex::escape;
+use regex::{Regex, escape};
 
 use crate::testenv::TestEnv;
 
@@ -1792,4 +1792,12 @@ fn test_error_if_hidden_not_set_and_pattern_starts_with_dot() {
     te.assert_output(&["--hidden", "^\\.gitignore"], ".gitignore");
     te.assert_output(&["--hidden", "--glob", ".gitignore"], ".gitignore");
     te.assert_output(&[".gitignore"], "");
+}
+#[test]
+fn test_output_ends_with_empty_line() {
+    let (te, _) = get_test_env_with_abs_path(DEFAULT_DIRS, DEFAULT_FILES);
+    let ends_with_empty_line = Regex::new(r"[^\n]\n\n$").unwrap();
+
+    te.assert_output_matches_re(&[ "-h" ], &ends_with_empty_line);
+    te.assert_output_matches_re(&[ "--help" ], &ends_with_empty_line);
 }

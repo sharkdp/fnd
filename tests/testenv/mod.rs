@@ -8,6 +8,7 @@ use std::os::windows;
 use std::path::{Path, PathBuf};
 use std::process;
 
+use regex::Regex;
 use tempdir::TempDir;
 
 /// Environment for the integration tests.
@@ -105,6 +106,21 @@ fn format_output_error(args: &[&str], expected: &str, actual: &str) -> String {
         ),
         args.join(" "),
         diff_text
+    )
+}
+
+fn format_match_error(args: &[&str], expectedr_re: &Regex, actual: &str) -> String {
+    format!(
+        concat!(
+            "`fd {}` did not produce the expected output.\n",
+            "The Regex\n",
+            "    {}\n",
+            "did not match the following output:\n",
+            "===== START OF OUTPUT >>>>>{}<<<<< END OF OUTPUT =====\n",
+        ),
+        args.join(" "),
+        expectedr_re.as_str(),
+        actual,
     )
 }
 
@@ -214,6 +230,17 @@ impl TestEnv {
         let output = self.assert_success_and_get_output(".", args);
 
         assert_eq!(expected, &output.stdout[..]);
+    }
+
+    /// Similar to assert_output but uses `regex::Regex` to match output.
+    pub fn assert_output_matches_re(&self, args: &[&str], expected_re: &Regex) {
+        let output = self.assert_success_and_get_output(".", args);
+
+        let actual = String::from_utf8_lossy(&output.stdout);
+
+        if !expected_re.is_match(&actual) {
+            panic!("{}", format_match_error(args, &expected_re, &actual));
+        }
     }
 
     /// Assert that calling *fd* in the specified path under the root working directory,
