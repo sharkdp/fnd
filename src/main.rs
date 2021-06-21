@@ -50,7 +50,37 @@ ow=0:or=0;38;5;16;48;5;203:no=0:ex=1;38;5;203:cd=0;38;5;203;48;5;236:mi=0;38;5;1
 ";
 
 fn run() -> Result<ExitCode> {
-    let matches = app::build_app().get_matches_from(env::args_os());
+    let mut app = app::build_app();
+
+    // When encountering parsing errors, print error message and exit
+    let matches = match app.get_matches_from_safe_borrow(env::args_os()) {
+        Ok(matches) => matches,
+        Err(err) => {
+            eprintln!("{}", err);
+            return Ok(ExitCode::GeneralError)
+        }
+    };
+
+    // Print short and long help
+    if matches.is_present("help") {
+        let _ = app.print_help();
+        // WORKAROUND: `clap` does currently not add a newline after the output
+        //     of `print_help` and `print_long_help`. According to this issue
+        //     (https://github.com/clap-rs/clap/issues/1536), this is a bug and
+        //     it will be fixed in version 3.
+        println!("");
+        return Ok(ExitCode::Success);
+    }
+    if matches.is_present("help_long") {
+        let _ = app.print_long_help();
+        // WORKAROUND: `clap` does currently not add a newline after the output
+        //     of `print_help` and `print_long_help`. According to this issue
+        //     (https://github.com/clap-rs/clap/issues/1536), this is a bug and
+        //     it will be fixed in version 3.
+        println!("");
+        return Ok(ExitCode::Success);
+    }
+
 
     // Set the current working directory of the process
     if let Some(base_directory) = matches.value_of_os("base-directory") {

@@ -32,6 +32,8 @@ path = "src/main.rs"
 [build-dependencies]
 clap = "2.31.2"
 version_check = "0.9"
+lazy_static = "1.1.0"
+ansi_term = "0.12"
 
 [dependencies]
 ansi_term = "0.12"
