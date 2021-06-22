@@ -18,6 +18,10 @@ jobs:
       osx_image: xcode11.4 # Catalina
       rust: stable
       env: TARGET=x86_64-apple-darwin
+    - os: osx
+      osx_image: xcode11.4 # Catalina
+      rust: stable
+      env: TARGET=aarch64-apple-darwin
     - os: linux
       rust: stable
       env:
@@ -51,6 +55,9 @@ jobs:
     - os: osx
       rust: 1.40.0
       env: TARGET=x86_64-apple-darwin
+    - os: osx
+      rust: 1.40.0
+      env: TARGET=aarch64-apple-darwin
 
 before_install:
   - ci/before_install.bash
