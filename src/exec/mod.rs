@@ -139,7 +139,7 @@ impl CommandTemplate {
     ///
     /// Using the internal `args` field, and a supplied `input` variable, a `Command` will be
     /// build. Once all arguments have been processed, the command is executed.
-    pub fn generate_and_execute(&self, input: &Path, out_perm: Arc<Mutex<()>>) -> ExitCode {
+    pub fn generate_and_execute(&self, input: &Path, out_perm: Arc<Mutex<()>>, is_multithread: bool) -> ExitCode {
         let input = strip_current_dir(input);
 
         let mut cmd = Command::new(self.args[0].generate(&input, self.path_separator.as_deref()));
@@ -147,14 +147,14 @@ impl CommandTemplate {
             cmd.arg(arg.generate(&input, self.path_separator.as_deref()));
         }
 
-        execute_command(cmd, &out_perm)
+        execute_command(cmd, &out_perm, is_multithread)
     }
 
     pub fn in_batch_mode(&self) -> bool {
         self.mode == ExecutionMode::Batch
     }
 
-    pub fn generate_and_execute_batch<I>(&self, paths: I) -> ExitCode
+    pub fn generate_and_execute_batch<I>(&self, paths: I, is_multithread: bool) -> ExitCode
     where
         I: Iterator<Item = PathBuf>,
     {
@@ -182,7 +182,7 @@ impl CommandTemplate {
         }
 
         if has_path {
-            execute_command(cmd, &Mutex::new(()))
+            execute_command(cmd, &Mutex::new(()), is_multithread)
         } else {
             ExitCode::Success
         }
