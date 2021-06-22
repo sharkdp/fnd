@@ -1,8 +1,7 @@
-use std::io::{self, StdoutLock, Write};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
 use lscolors::{LsColors, Style};
 
@@ -15,11 +14,11 @@ fn replace_path_separator(path: &str, new_path_separator: &str) -> String {
 }
 
 // TODO: this function is performance critical and can probably be optimized
-pub fn print_entry(
-    stdout: &mut StdoutLock,
+pub fn print_entry<W: Write>(
+    stdout: &mut W,
     entry: &PathBuf,
     config: &Options,
-    wants_to_quit: &Arc<AtomicBool>,
+    wants_to_quit: &AtomicBool,
 ) {
     let path = if entry.is_absolute() {
         entry.as_path()
@@ -40,12 +39,12 @@ pub fn print_entry(
 }
 
 // TODO: this function is performance critical and can probably be optimized
-fn print_entry_colorized(
-    stdout: &mut StdoutLock,
+fn print_entry_colorized<W: Write>(
+    stdout: &mut W,
     path: &Path,
     config: &Options,
     ls_colors: &LsColors,
-    wants_to_quit: &Arc<AtomicBool>,
+    wants_to_quit: &AtomicBool,
 ) -> io::Result<()> {
     let default_style = ansi_term::Style::default();
 
@@ -64,6 +63,7 @@ fn print_entry_colorized(
         // TODO: can we move this out of the if-statement? Why do we call it that often?
         if wants_to_quit.load(Ordering::Relaxed) {
             writeln!(stdout)?;
+            stdout.flush()?;
             process::exit(ExitCode::KilledBySigint.into());
         }
     }
@@ -76,8 +76,8 @@ fn print_entry_colorized(
 }
 
 // TODO: this function is performance critical and can probably be optimized
-fn print_entry_uncolorized_base(
-    stdout: &mut StdoutLock,
+fn print_entry_uncolorized_base<W: Write>(
+    stdout: &mut W,
     path: &Path,
     config: &Options,
 ) -> io::Result<()> {
@@ -91,8 +91,8 @@ fn print_entry_uncolorized_base(
 }
 
 #[cfg(not(unix))]
-fn print_entry_uncolorized(
-    stdout: &mut StdoutLock,
+fn print_entry_uncolorized<W: Write>(
+    stdout: &mut W,
     path: &Path,
     config: &Options,
 ) -> io::Result<()> {
@@ -100,8 +100,8 @@ fn print_entry_uncolorized(
 }
 
 #[cfg(unix)]
-fn print_entry_uncolorized(
-    stdout: &mut StdoutLock,
+fn print_entry_uncolorized<W: Write>(
+    stdout: &mut W,
     path: &Path,
     config: &Options,
 ) -> io::Result<()> {

@@ -1,14 +1,14 @@
-use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::fs::{FileType, Metadata};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender as Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time;
+use std::{borrow::Cow, io::Write};
 
 use anyhow::{anyhow, Result};
 use ignore::overrides::OverrideBuilder;
@@ -21,6 +21,12 @@ use crate::exit_codes::{merge_exitcodes, ExitCode};
 use crate::filesystem;
 use crate::options::Options;
 use crate::output;
+
+pub const WORKER_CHANNEL_DEFAULT_BOUND: usize = 1000;
+
+pub fn make_worker_channel() -> (Sender<WorkerResult>, Receiver<WorkerResult>) {
+    sync_channel(WORKER_CHANNEL_DEFAULT_BOUND)
+}
 
 /// The receiver thread can either be buffering results or directly streaming to the console.
 enum ReceiverMode {
@@ -41,6 +47,9 @@ pub enum WorkerResult {
 /// Maximum size of the output buffer before flushing results to the console
 pub const MAX_BUFFER_LENGTH: usize = 1000;
 
+/// After TTY_FLUSH_INTERVAL flush any buffered data to terminal
+pub const TTY_FLUSH_INTERVAL: usize = 1;
+
 /// Recursively scan the given search path for files / pathnames matching the pattern.
 ///
 /// If the `--exec` argument was supplied, this will create a thread pool for executing
@@ -51,7 +60,7 @@ pub fn scan(path_vec: &[PathBuf], pattern: Arc<Regex>, config: Arc<Options>) -> 
     let first_path_buf = path_iter
         .next()
         .expect("Error: Path vector can not be empty");
-    let (tx, rx) = channel();
+    let (tx, rx) = make_worker_channel();
 
     let mut override_builder = OverrideBuilder::new(first_path_buf.as_path());
 
@@ -207,8 +216,6 @@ fn spawn_receiver(
         } else {
             let start = time::Instant::now();
 
-            let mut buffer = vec![];
-
             // Start in buffering mode
             let mut mode = ReceiverMode::Buffering;
 
@@ -218,63 +225,100 @@ fn spawn_receiver(
                 .unwrap_or_else(|| time::Duration::from_millis(100));
 
             let stdout = io::stdout();
-            let mut stdout = stdout.lock();
+            let stdout = stdout.lock();
+            let mut stdout = io::BufWriter::new(stdout);
 
             let mut num_results = 0;
 
-            for worker_result in rx {
-                match worker_result {
-                    WorkerResult::Entry(value) => {
-                        match mode {
-                            ReceiverMode::Buffering => {
-                                buffer.push(value);
+            if config.interactive_terminal {
+                let mut buffer = Vec::with_capacity(MAX_BUFFER_LENGTH);
+                for worker_result in rx {
+                    match worker_result {
+                        WorkerResult::Entry(path) => {
+                            match mode {
+                                ReceiverMode::Buffering => {
+                                    buffer.push(path);
 
-                                // Have we reached the maximum buffer size or maximum buffering time?
-                                if buffer.len() > MAX_BUFFER_LENGTH
-                                    || time::Instant::now() - start > max_buffer_time
-                                {
-                                    // Flush the buffer
-                                    for v in &buffer {
-                                        output::print_entry(
-                                            &mut stdout,
-                                            v,
-                                            &config,
-                                            &wants_to_quit,
-                                        );
+                                    // Have we reached the maximum buffer size or maximum buffering time?
+                                    if buffer.len() > MAX_BUFFER_LENGTH
+                                        || time::Instant::now() - start > max_buffer_time
+                                    {
+                                        // Flush the buffer
+                                        for path in &buffer {
+                                            output::print_entry(
+                                                &mut stdout,
+                                                path,
+                                                &config,
+                                                &wants_to_quit,
+                                            );
+                                        }
+                                        buffer.clear();
+                                        let r = stdout.flush();
+                                        if r.is_err() {
+                                            // Probably a broken pipe. Exit gracefully.
+                                            process::exit(ExitCode::GeneralError.into());
+                                        }
+                                        // Start streaming
+                                        mode = ReceiverMode::Streaming;
                                     }
-                                    buffer.clear();
-
-                                    // Start streaming
-                                    mode = ReceiverMode::Streaming;
+                                }
+                                ReceiverMode::Streaming => {
+                                    output::print_entry(
+                                        &mut stdout,
+                                        &path,
+                                        &config,
+                                        &wants_to_quit,
+                                    );
+                                    if num_results % TTY_FLUSH_INTERVAL == 0 {
+                                        let r = stdout.flush();
+                                        if r.is_err() {
+                                            // Probably a broken pipe. Exit gracefully.
+                                            process::exit(ExitCode::GeneralError.into());
+                                        }
+                                    }
                                 }
                             }
-                            ReceiverMode::Streaming => {
-                                output::print_entry(&mut stdout, &value, &config, &wants_to_quit);
+                            num_results += 1;
+                        }
+                        WorkerResult::Error(err) => {
+                            if show_filesystem_errors {
+                                print_error(err.to_string());
                             }
                         }
-
-                        num_results += 1;
                     }
-                    WorkerResult::Error(err) => {
-                        if show_filesystem_errors {
-                            print_error(err.to_string());
+                    if let Some(max_results) = config.max_results {
+                        if num_results >= max_results {
+                            break;
                         }
                     }
                 }
-
-                if let Some(max_results) = config.max_results {
-                    if num_results >= max_results {
-                        break;
+                // If we have finished fast enough (faster than max_buffer_time), we haven't streamed
+                // anything to the console, yet. In this case, sort the results and print them:
+                if !buffer.is_empty() {
+                    buffer.sort();
+                    for path in buffer {
+                        output::print_entry(&mut stdout, &path,  &config, &wants_to_quit);
                     }
                 }
-            }
-
-            // If we have finished fast enough (faster than max_buffer_time), we haven't streamed
-            // anything to the console, yet. In this case, sort the results and print them:
-            if !buffer.is_empty() {
-                buffer.sort();
-                for value in buffer {
-                    output::print_entry(&mut stdout, &value, &config, &wants_to_quit);
+            } else {
+                let mut num_results = 0;
+                for worker_result in rx {
+                    match worker_result {
+                        WorkerResult::Entry(path) => {
+                            output::print_entry(&mut stdout, &path,  &config, &wants_to_quit);
+                            num_results += 1_usize;
+                        }
+                        WorkerResult::Error(err) => {
+                            if show_filesystem_errors {
+                                print_error(err.to_string());
+                            }
+                        }
+                    }
+                    if let Some(max_results) = config.max_results {
+                        if num_results >= max_results {
+                            break;
+                        }
+                    }
                 }
             }
 

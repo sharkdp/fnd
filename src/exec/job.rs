@@ -25,7 +25,7 @@ pub fn job(
         // Obtain the next result from the receiver, else if the channel
         // has closed, exit from the loop
         let value: PathBuf = match lock.recv() {
-            Ok(WorkerResult::Entry(val)) => val,
+            Ok(WorkerResult::Entry(path)) => path,
             Ok(WorkerResult::Error(err)) => {
                 if show_filesystem_errors {
                     print_error(err.to_string());
@@ -50,7 +50,7 @@ pub fn batch(
     show_filesystem_errors: bool,
 ) -> ExitCode {
     let paths = rx.iter().filter_map(|value| match value {
-        WorkerResult::Entry(val) => Some(val),
+        WorkerResult::Entry(path) => Some(path),
         WorkerResult::Error(err) => {
             if show_filesystem_errors {
                 print_error(err.to_string());
