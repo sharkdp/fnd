@@ -176,6 +176,18 @@ fn run() -> Result<ExitCode> {
     let path_separator = matches
         .value_of("path-separator")
         .map_or_else(filesystem::default_path_separator, |s| Some(s.to_owned()));
+    if let Some(sep) = path_separator.clone() {
+        if sep.len() > 1 {
+            return Err(anyhow!(
+                "A path separator must be exactly one byte, but \
+                 the given separator is {} bytes: {}\n\
+                 In some shells on Windows '/' is automatically \
+                 expanded. Use '//' instead.",
+                sep.len(),
+                sep
+            ));
+        };
+    };
 
     let ls_colors = if colored_output {
         Some(LsColors::from_env().unwrap_or_else(|| LsColors::from_string(DEFAULT_LS_COLORS)))
